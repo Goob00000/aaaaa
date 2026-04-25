@@ -59,7 +59,7 @@ class RFPAgent:
             })
         return pairs
 
-    def draft_answer(self, question: str, category: str = "") -> dict:
+    def draft_answer(self, question: str, category: str = "", updated_by: str = "AI Draft") -> dict:
         past = self.retrieve(question, category=category)
 
         context_blocks = []
@@ -89,10 +89,13 @@ Please draft a response to the RFP question above."""
             messages=[{"role": "user", "content": user_message}],
         )
 
+        low_confidence = past[0]["similarity"] < 0.6 if past else True
         return {
             "question": question,
             "draft_answer": response.content[0].text,
+            "updated_by": updated_by,
+            "review_status": "Pending Review" if low_confidence else "Draft",
             "sources_used": len(past),
             "top_match_similarity": past[0]["similarity"] if past else 0,
-            "needs_review": past[0]["similarity"] < 0.6 if past else True,
+            "needs_review": low_confidence,
         }

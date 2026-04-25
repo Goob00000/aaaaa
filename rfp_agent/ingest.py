@@ -28,6 +28,8 @@ def load_history(path: str) -> pd.DataFrame:
     df["category"] = df.get("category", pd.Series([""] * len(df))).fillna("").astype(str)
     df["date_updated"] = df.get("date_updated", pd.Series([""] * len(df))).fillna("").astype(str)
     df["date_created"] = df.get("date_created", pd.Series([""] * len(df))).fillna("").astype(str)
+    df["updated_by"] = df.get("updated_by", pd.Series([""] * len(df))).fillna("").astype(str)
+    df["review_status"] = df.get("review_status", pd.Series([""] * len(df))).fillna("").astype(str)
     return df
 
 
@@ -62,6 +64,8 @@ def ingest(history_path: str, reset: bool = False) -> None:
             "category": row["category"],
             "date_updated": row["date_updated"],
             "date_created": row["date_created"],
+            "updated_by": row["updated_by"],
+            "review_status": row["review_status"],
         })
 
     # Upsert in batches of 100

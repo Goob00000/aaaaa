@@ -7,7 +7,7 @@ Commands:
 
 Usage:
   python main.py ingest --history data/past_responses.xlsx [--reset]
-  python main.py respond --rfp data/new_rfp.xlsx --output data/rfp_response.xlsx
+  python main.py respond --rfp data/new_rfp.xlsx --output data/rfp_response.xlsx [--updated_by "Jane Smith"]
 """
 
 import argparse
@@ -48,11 +48,13 @@ def cmd_respond(args):
         category = str(row.get("category", "")).strip() if "category" in df.columns else ""
         print(f"[{i + 1}/{total}] {question[:80]}...")
 
-        result = agent.draft_answer(question, category=category)
+        result = agent.draft_answer(question, category=category, updated_by=args.updated_by)
         results.append({
             "question": question,
             "category": category,
             "draft_answer": result["draft_answer"],
+            "updated_by": result["updated_by"],
+            "review_status": result["review_status"],
             "needs_review": result["needs_review"],
             "top_match_similarity": result["top_match_similarity"],
             "sources_used": result["sources_used"],
@@ -65,12 +67,24 @@ def cmd_respond(args):
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         out_df.to_excel(writer, index=False, sheet_name="Responses")
 
-        # Highlight rows that need human review
         ws = writer.sheets["Responses"]
         from openpyxl.styles import PatternFill
-        yellow = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
-        needs_review_col = out_df.columns.get_loc("needs_review") + 1  # 1-indexed
+        from openpyxl.worksheet.datavalidation import DataValidation
 
+        # Dropdown for review_status column
+        review_status_col = out_df.columns.get_loc("review_status") + 1
+        col_letter = ws.cell(row=1, column=review_status_col).column_letter
+        dv = DataValidation(
+            type="list",
+            formula1='"Draft,Pending Review,Approved,Published"',
+            allow_blank=False,
+            showDropDown=False,
+        )
+        dv.sqref = f"{col_letter}2:{col_letter}{len(out_df) + 1}"
+        ws.add_data_validation(dv)
+
+        # Highlight rows that need human review
+        yellow = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
         for row_idx, needs in enumerate(out_df["needs_review"], start=2):
             if needs:
                 for col_idx in range(1, len(out_df.columns) + 1):
@@ -96,6 +110,7 @@ def main():
     p_respond = sub.add_parser("respond", help="Generate draft answers for a new RFP")
     p_respond.add_argument("--rfp", required=True, help="Path to new RFP spreadsheet (.xlsx)")
     p_respond.add_argument("--output", default="data/rfp_response.xlsx", help="Output path")
+    p_respond.add_argument("--updated_by", default="AI Draft", help="Name to record in the 'updated_by' field")
     p_respond.set_defaults(func=cmd_respond)
 
     args = parser.parse_args()
