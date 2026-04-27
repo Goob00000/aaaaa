@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime data — not versioned
+data/rfp_agent.db
+data/uploads/
+
+# ChromaDB vector store — rebuilt by ingest
+knowledge_base/
