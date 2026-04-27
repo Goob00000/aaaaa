@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}{{ job.filename }} — RFP Agent{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div>
+    <a href="/" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left me-1"></i>Home</a>
+    <h4 class="fw-bold mb-0 mt-1">{{ job.filename }}</h4>
+    <span class="text-muted small">{{ job.created_at[:16].replace("T"," ") }}</span>
+  </div>
+  <div class="ms-auto d-flex gap-2 flex-wrap">
+    {% if job.status == "done" %}
+    <a href="/jobs/{{ job.id }}/download" class="btn btn-success">
+      <i class="bi bi-download me-1"></i>Download Excel
+    </a>
+    {% endif %}
+    {% if job.status == "done" %}
+      <span class="badge bg-success fs-6 align-self-center">Done</span>
+    {% elif job.status == "processing" %}
+      <span class="badge bg-warning text-dark fs-6 align-self-center">Processing…</span>
+    {% else %}
+      <span class="badge bg-danger fs-6 align-self-center">Error</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Processing progress -->
+{% if job.status == "processing" %}
+<div class="card shadow-sm mb-4" id="progress-card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between mb-1">
+      <span class="fw-semibold">Processing questions…</span>
+      <span class="text-muted small" id="progress-label">{{ job.processed }} / {{ job.total }}</span>
+    </div>
+    <div class="progress" style="height:20px;">
+      <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+           id="progress-bar"
+           role="progressbar"
+           style="width:{{ (job.processed / job.total * 100) | round | int if job.total else 0 }}%"
+           aria-valuenow="{{ job.processed }}"
+           aria-valuemin="0"
+           aria-valuemax="{{ job.total }}">
+      </div>
+    </div>
+    <p class="text-muted small mt-2 mb-0">The page will refresh automatically when complete.</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Error -->
+{% if job.status == "error" %}
+<div class="alert alert-danger">
+  <strong>Processing failed:</strong> {{ job.error_message or "Unknown error" }}
+</div>
+{% endif %}
+
+<!-- Stats row -->
+{% if job.status == "done" %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-primary">{{ stats.total }}</div>
+        <div class="small text-muted">Total</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-warning">{{ stats.needs_review }}</div>
+        <div class="small text-muted">Needs Review</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-success">{{ stats.approved }}</div>
+        <div class="small text-muted">Approved</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center shadow-sm">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-primary">{{ stats.published }}</div>
+        <div class="small text-muted">Published</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="card shadow-sm mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-end">
+    <div>
+      <label class="form-label small fw-semibold mb-1">Category</label>
+      <select name="category" class="form-select form-select-sm" style="min-width:180px;" onchange="this.form.submit()">
+        <option value="">All categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label small fw-semibold mb-1">Review Status</label>
+      <select name="status" class="form-select form-select-sm" style="min-width:160px;" onchange="this.form.submit()">
+        <option value="">All statuses</option>
+        {% for s in review_statuses %}
+        <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if selected_category or selected_status %}
+    <a href="/jobs/{{ job.id }}" class="btn btn-sm btn-outline-secondary">Clear filters</a>
+    {% endif %}
+    <span class="text-muted small ms-auto align-self-center">{{ results|length }} row{% if results|length != 1 %}s{% endif %}</span>
+  </div>
+</form>
+
+<!-- Results table -->
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    {% if results %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="results-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width:5%">#</th>
+            <th style="width:25%">Question</th>
+            <th style="width:13%">Category</th>
+            <th style="width:15%">Matched Topic</th>
+            <th style="width:22%">Draft Answer</th>
+            <th style="width:8%">Score</th>
+            <th style="width:7%">Status</th>
+            <th style="width:5%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr id="row-{{ r.id }}" class="{% if r.needs_review %}table-warning{% endif %}">
+            <td class="text-muted small">{{ loop.index }}</td>
+            <td>
+              <span class="small">{{ r.original_question[:120] }}{% if r.original_question|length > 120 %}…{% endif %}</span>
+            </td>
+            <td>
+              <span class="badge cat-badge cat-{{ r.detected_category | replace('/','-') | replace(' ','-') | lower }}">
+                {{ r.detected_category }}
+              </span>
+            </td>
+            <td class="small text-muted">{{ r.matched_topic[:60] }}{% if r.matched_topic and r.matched_topic|length > 60 %}…{% endif %}</td>
+            <td>
+              <span class="small answer-preview" id="preview-{{ r.id }}">
+                {{ r.draft_answer[:100] if r.draft_answer else '' }}{% if r.draft_answer and r.draft_answer|length > 100 %}…{% endif %}
+              </span>
+            </td>
+            <td>
+              <span class="badge score-badge {% if r.match_score >= 0.75 %}bg-success{% elif r.match_score >= 0.55 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                {{ "%.2f"|format(r.match_score) }}
+              </span>
+            </td>
+            <td>
+              <select class="form-select form-select-sm status-select"
+                      onchange="saveField({{ r.id }}, 'review_status', this.value, this)">
+                {% for s in review_statuses %}
+                <option {% if r.review_status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary"
+                      onclick="openModal(
+                        {{ r.id }},
+                        {{ r.original_question | tojson }},
+                        {{ (r.draft_answer or '') | tojson }},
+                        {{ (r.updated_by or '') | tojson }},
+                        {{ (r.review_status or 'Draft') | tojson }}
+                      )">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+      No results match the current filters.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Edit modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#EBF3FB;">
+        <h5 class="modal-title fw-bold" id="editModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit Response</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Original Question</label>
+          <p id="modal-question" class="form-control-plaintext border rounded px-3 py-2 bg-light small"></p>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Draft Answer</label>
+          <textarea id="modal-answer" class="form-control" rows="12" style="font-size:.9rem;"></textarea>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Updated By</label>
+            <input id="modal-updated-by" class="form-control" placeholder="Your name">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Review Status</label>
+            <select id="modal-status" class="form-select">
+              {% for s in review_statuses %}
+              <option>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveModal()">
+          <i class="bi bi-check-lg me-1"></i>Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if job.status == "processing" %}
+<script>pollProgress("{{ job.id }}");</script>
+{% endif %}
+{% endblock %}

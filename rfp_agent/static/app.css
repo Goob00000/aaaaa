@@ -1,0 +1,55 @@
+/* ── Category badges ──────────────────────────────────────────────────── */
+.cat-badge { font-size: .72rem; font-weight: 600; letter-spacing: .02em; }
+
+.cat-financial-commercial  { background: #198754; }
+.cat-technical             { background: #0d6efd; }
+.cat-business-operations   { background: #6f42c1; }
+.cat-legal-compliance      { background: #dc3545; }
+.cat-security-privacy      { background: #fd7e14; }
+.cat-hr-staffing           { background: #20c997; color: #000 !important; }
+.cat-project-management    { background: #6c757d; }
+.cat-other                 { background: #adb5bd; color: #000 !important; }
+
+/* ── Score badges ─────────────────────────────────────────────────────── */
+.score-badge { font-size: .75rem; font-weight: 700; }
+
+/* ── Answer preview cell ──────────────────────────────────────────────── */
+.answer-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #444;
+  line-height: 1.4;
+}
+
+/* ── Table tweaks ─────────────────────────────────────────────────────── */
+#results-table td { vertical-align: top; padding-top: .6rem; padding-bottom: .6rem; }
+#results-table th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ── Status select in table ───────────────────────────────────────────── */
+.status-select { font-size: .8rem; padding: .2rem .4rem; min-width: 130px; }
+
+/* ── Save feedback flash ──────────────────────────────────────────────── */
+.save-flash {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  min-width: 220px;
+  animation: fadeout 2.5s forwards;
+}
+@keyframes fadeout {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+/* ── Progress bar text ────────────────────────────────────────────────── */
+#progress-bar { font-size: .8rem; line-height: 20px; }
+
+/* ── Navbar active ────────────────────────────────────────────────────── */
+.navbar .nav-link:hover { opacity: .8; }
+
+/* ── Card header ──────────────────────────────────────────────────────── */
+.card-header { font-size: .9rem; }

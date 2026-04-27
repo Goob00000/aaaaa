@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Home — RFP Agent{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col">
+    <h4 class="fw-bold mb-0">Dashboard</h4>
+    <p class="text-muted small mb-0">Upload your response library, then process incoming RFPs.</p>
+  </div>
+</div>
+
+{% if not api_key_set %}
+<div class="alert alert-danger d-flex align-items-center mb-4">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <span><strong>ANTHROPIC_API_KEY</strong> is not set. Set it as an environment variable before processing.</span>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-5">
+
+  <!-- Library upload card -->
+  <div class="col-md-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2" style="background:#EBF3FB;">
+        <i class="bi bi-journal-text text-primary fs-5"></i>
+        <strong>Response Library</strong>
+        {% if library_loaded %}
+        <span class="badge bg-success ms-auto">{{ library_count }} entries loaded</span>
+        {% else %}
+        <span class="badge bg-secondary ms-auto">Not loaded</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">
+          Upload your <code>predefined_responses.xlsx</code> to build the matching knowledge base.
+          Required columns: <code>topic</code>, <code>response</code>.
+          Optional: <code>category</code>, <code>keywords</code>.
+        </p>
+        <form action="/ingest" method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Spreadsheet (.xlsx)</label>
+            <input type="file" name="file" accept=".xlsx" class="form-control" required>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="reset" value="true" id="resetCheck" checked>
+            <label class="form-check-label small" for="resetCheck">Replace existing library on upload</label>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-cloud-upload me-1"></i>Upload &amp; Ingest
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- RFP process card -->
+  <div class="col-md-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2" style="background:#EBF3FB;">
+        <i class="bi bi-lightning text-warning fs-5"></i>
+        <strong>Process New RFP</strong>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">
+          Upload a spreadsheet of RFP questions (one per row, column named <code>question</code>).
+          The agent will auto-categorize each question and draft a response.
+        </p>
+        {% if not library_loaded %}
+        <div class="alert alert-warning small py-2">
+          <i class="bi bi-exclamation-triangle me-1"></i>Load your response library first.
+        </div>
+        {% endif %}
+        <form action="/process" method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">RFP Questions (.xlsx)</label>
+            <input type="file" name="file" accept=".xlsx" class="form-control" required {% if not library_loaded %}disabled{% endif %}>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Your name <span class="text-muted fw-normal">(recorded as author)</span></label>
+            <input type="text" name="updated_by" class="form-control" placeholder="e.g. Jane Smith" value="AI Draft">
+          </div>
+          <button type="submit" class="btn btn-success w-100" {% if not library_loaded %}disabled{% endif %}>
+            <i class="bi bi-play-circle me-1"></i>Process RFP
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Jobs table -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2" style="background:#EBF3FB;">
+    <i class="bi bi-clock-history text-secondary fs-5"></i>
+    <strong>Recent Jobs</strong>
+  </div>
+  <div class="card-body p-0">
+    {% if jobs %}
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Filename</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td class="fw-semibold">{{ job.filename }}</td>
+          <td class="text-muted small">{{ job.created_at[:16].replace("T"," ") }}</td>
+          <td>
+            {% if job.status == "done" %}
+              <span class="badge bg-success">Done</span>
+            {% elif job.status == "processing" %}
+              <span class="badge bg-warning text-dark">Processing</span>
+            {% else %}
+              <span class="badge bg-danger">Error</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ job.processed }} / {{ job.total }}</td>
+          <td class="text-end">
+            <a href="/jobs/{{ job.id }}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-eye me-1"></i>View
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+      No jobs yet. Upload a response library and process your first RFP above.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

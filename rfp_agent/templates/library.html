@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Response Library — RFP Agent{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div>
+    <a href="/" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left me-1"></i>Home</a>
+    <h4 class="fw-bold mb-0 mt-1">Response Library</h4>
+    <p class="text-muted small mb-0">{{ total }} predefined response{% if total != 1 %}s{% endif %} loaded</p>
+  </div>
+</div>
+
+{% if ingested %}
+<div class="alert alert-success d-flex align-items-center mb-4">
+  <i class="bi bi-check-circle-fill me-2"></i>
+  Library ingested successfully. {{ total }} response{% if total != 1 %}s{% endif %} are now available for matching.
+</div>
+{% endif %}
+
+<!-- Upload new library -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header" style="background:#EBF3FB;">
+    <strong><i class="bi bi-cloud-upload me-2"></i>Upload New Library</strong>
+  </div>
+  <div class="card-body">
+    <form action="/ingest" method="post" enctype="multipart/form-data" class="d-flex flex-wrap gap-3 align-items-end">
+      <div>
+        <label class="form-label fw-semibold small mb-1">Spreadsheet (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required style="min-width:250px;">
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="reset" value="true" id="resetCheck2" checked>
+        <label class="form-check-label small" for="resetCheck2">Replace existing library</label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-arrow-repeat me-1"></i>Re-ingest
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="card shadow-sm mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-end">
+    <div>
+      <label class="form-label small fw-semibold mb-1">Category</label>
+      <select name="category" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
+        <option value="">All categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label small fw-semibold mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <input type="text" name="search" class="form-control" placeholder="topic, keyword, or response text" value="{{ search }}" style="min-width:220px;">
+        <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+      </div>
+    </div>
+    {% if selected_category or search %}
+    <a href="/library" class="btn btn-sm btn-outline-secondary">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- Library table -->
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    {% if entries %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:20%">Topic</th>
+            <th style="width:16%">Category</th>
+            <th style="width:14%">Keywords</th>
+            <th>Response Preview</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td class="fw-semibold small">{{ entry.topic }}</td>
+            <td>
+              <span class="badge cat-badge cat-{{ entry.category | replace('/','-') | replace(' ','-') | lower }}">
+                {{ entry.category }}
+              </span>
+            </td>
+            <td class="text-muted small">{{ entry.keywords[:60] if entry.keywords else '—' }}</td>
+            <td class="small text-muted">
+              {{ entry.response[:180] }}{% if entry.response|length > 180 %}…{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+      <span class="text-muted small">Page {{ page }} of {{ total_pages }}</span>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if page > 1 %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page - 1 }}&category={{ selected_category }}&search={{ search }}">Previous</a>
+          </li>
+          {% endif %}
+          {% if page < total_pages %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page + 1 }}&category={{ selected_category }}&search={{ search }}">Next</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+      {% if search or selected_category %}
+        No entries match your filters.
+      {% else %}
+        No library loaded yet. Upload a <code>predefined_responses.xlsx</code> above.
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

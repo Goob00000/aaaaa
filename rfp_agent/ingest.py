@@ -83,7 +83,7 @@ def make_id(topic: str) -> str:
     return hashlib.md5(topic.encode()).hexdigest()
 
 
-def ingest(library_path: str, reset: bool = False) -> None:
+def ingest(library_path: str, reset: bool = False) -> pd.DataFrame:
     df = load_library(library_path)
 
     needs_categorization = df["category"].eq("").sum()
@@ -140,6 +140,8 @@ def ingest(library_path: str, reset: bool = False) -> None:
     print(f"\nDone. {len(ids)} responses loaded into '{COLLECTION_NAME}'.")
     for cat, count in sorted(breakdown.items()):
         print(f"  {cat}: {count}")
+
+    return df
 
 
 def main():
