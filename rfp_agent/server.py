@@ -31,7 +31,7 @@ from database import (
     get_results, init_db, insert_result, list_jobs, update_job_progress,
     update_result, upsert_library_entries,
 )
-from ingest import ingest, load_library
+from ingest import ingest
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -128,8 +128,7 @@ def _build_excel(results: list[dict]) -> io.BytesIO:
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "jobs": list_jobs(),
         "library_loaded": _library_loaded(),
         "library_count": get_library_count(),
@@ -175,8 +174,7 @@ async def library_page(
         offset=offset,
     )
     total_pages = max(1, (total + limit - 1) // limit)
-    return templates.TemplateResponse("library.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "library.html", {
         "entries": entries,
         "categories": get_library_categories(),
         "selected_category": category,
@@ -240,8 +238,7 @@ async def job_page(
     results = get_results(job_id, category=category or None, status=status or None)
     stats = get_job_stats(job_id)
 
-    return templates.TemplateResponse("job.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "job.html", {
         "job": job,
         "results": results,
         "stats": stats,
